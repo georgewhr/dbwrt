@@ -13,6 +13,12 @@ config NET_VENDOR_QCOM
 
 if NET_VENDOR_QCOM
 
+config QCOM_SSDK
+        tristate "Qualcomm Switch SDK"
+        ---help---
+        QCA Switch SDK is a set of drivers to manage Qualcomm switch.
+        Its functionality also includes PHY, MAC initialization during kernel bootup
+
 config ESSEDMA
 	tristate "Qualcomm ESS Edmasupport"
 	---help---
