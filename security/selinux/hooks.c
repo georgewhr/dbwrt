@@ -1569,7 +1569,11 @@ static int cred_has_capability(const struct cred *cred,
 
 	rc = avc_has_perm_noaudit(sid, sid, sclass, av, 0, &avd);
 	if (audit == SECURITY_CAP_AUDIT) {
+#ifdef CONFIG_HLABS
+		int rc2 = avc_audit(sid, sid, sclass, av, &avd, rc, &ad, 0);
+#else
 		int rc2 = avc_audit(sid, sid, sclass, av, &avd, rc, &ad);
+#endif
 		if (rc2)
 			return rc2;
 	}
@@ -2767,10 +2771,16 @@ static int selinux_inode_follow_link(struct dentry *dentry, struct nameidata *na
 
 	return dentry_has_perm(cred, dentry, FILE__READ);
 }
-
+#ifdef CONFIG_HLABS
+static noinline int audit_inode_permission(struct inode *inode,
+					   u32 perms, u32 audited, u32 denied,
+					   int result,
+					   unsigned flags)
+#else
 static noinline int audit_inode_permission(struct inode *inode,
 					   u32 perms, u32 audited, u32 denied,
 					   unsigned flags)
+#endif
 {
 	struct common_audit_data ad;
 	struct inode_security_struct *isec = inode->i_security;
@@ -2778,9 +2788,13 @@ static noinline int audit_inode_permission(struct inode *inode,
 
 	ad.type = LSM_AUDIT_DATA_INODE;
 	ad.u.inode = inode;
-
+#ifdef CONFIG_HLABS
+	rc = slow_avc_audit(current_sid(), isec->sid, isec->sclass, perms,
+			    audited, denied, result, &ad, flags);
+#else
 	rc = slow_avc_audit(current_sid(), isec->sid, isec->sclass, perms,
 			    audited, denied, &ad, flags);
+#endif
 	if (rc)
 		return rc;
 	return 0;
@@ -2821,8 +2835,9 @@ static int selinux_inode_permission(struct inode *inode, int mask)
 				     &denied);
 	if (likely(!audited))
 		return rc;
-
-	rc2 = audit_inode_permission(inode, perms, audited, denied, flags);
+#ifdef CONFIG_HLABS
+	rc2 = audit_inode_permission(inode, perms, audited, denied, rc, flags);
+#endif
 	if (rc2)
 		return rc2;
 	return rc;
@@ -5966,11 +5981,12 @@ static struct security_operations selinux_ops = {
 
 static __init int selinux_init(void)
 {
+#ifndef CONFIG_HLABS
 	if (!security_module_enable(&selinux_ops)) {
 		selinux_enabled = 0;
 		return 0;
 	}
-
+#endif
 	if (!selinux_enabled) {
 		printk(KERN_INFO "SELinux:  Disabled at boot.\n");
 		return 0;

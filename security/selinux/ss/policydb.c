@@ -148,6 +148,13 @@ static struct policydb_compat_info policydb_compat[] = {
 		.sym_num	= SYM_NUM,
 		.ocon_num	= OCON_NUM,
 	},
+#ifdef CONFIG_HLABS
+	{
+		.version	= POLICYDB_VERSION_XPERMS_IOCTL,
+		.sym_num	= SYM_NUM,
+		.ocon_num	= OCON_NUM,
+	},
+#endif
 };
 
 static struct policydb_compat_info *policydb_lookup_compat(int version)
